@@ -38,4 +38,31 @@ In dieser Phase wird das logische Kernnetzwerk des Labors aufgebaut. Alle Server
 3. **Software-Härtung:** Bewusste Abwahl aller X11/Desktop-Umgebungen (GNOME/XFCE). Es wurden ausschließlich die Pakete `SSH server` und `Standard-Systemwerkzeuge` installiert.
 
 ---
-*Nächster Schritt: IP-Konfiguration des Core-Servers und Installation des ersten Netzwerkdienstes.*
+## Phase 2: Core-Dienste Deployment & Netzwerk-Härtung
+
+In dieser Phase wurde die erste fundamentale Infrastruktur-VM manuell aufgesetzt und mit zentralen Netzwerkdiensten gehärtet.
+
+### VM 1: Core-Server (`srv-core-01`)
+* **Betriebssystem:** Debian GNU/Linux 13 (Trixie) – Minimal Installation (CLI)
+* **Ressourcen:** 2 vCPUs, 2 GB RAM, 20 GB vDisk
+* **Statische IP:** `192.168.122.200/24`
+* **Gateway & DNS-Forwarder:** `192.168.122.1`
+
+### Bereitgestellte Dienste & Konfiguration:
+1. **Netzwerk-Härtung (`/etc/network/interfaces`):** * Umstellung des primären Interfaces (`enp1s0`) von DHCP auf eine feste, statische IP-Konfiguration.
+   * Erfolgreiches Troubleshooting bei Syntax-Konflikten (Typo-Korrektur der `address`-Direktive) über die serielle Virt-Manager-Konsole.
+2. **DNS-Server (BIND9):**
+   * Einrichtung als **Authoritative Nameserver** für die lokale Labor-Domain `homelab.local`.
+   * Konfiguration einer Forward-Zone (`db.homelab.local`) inklusive SOA- (Start of Authority) und A-Records für die Core-Infrastruktur.
+   * Aktivierung von **DNS-Forwarding** in `named.conf.options` zur nahtlosen Weiterleitung externer Internet-Anfragen über das KVM-Gateway.
+3. **Lokale Resolver-Anpassung (`/etc/resolv.conf`):**
+   * Systemweite DNS-Priorisierung auf den lokalen Loopback (`127.0.0.1`) umgestellt.
+   * Such-Domain (`search homelab.local`) implementiert, um Kurznamen-Auflösungen im Labor zu ermöglichen.
+
+### Validierung & Funktionstests:
+* Syntax-Prüfung via `named-checkconf` und `named-checkzone` fehlerfrei durchgeführt.
+* Auflösung des FQDN (`srv-core-01.homelab.local`) sowie des Kurznamens (`srv-core-01`) via `nslookup` erfolgreich verifiziert.
+* Externes Routing und Caching mittels `ping google.com` erfolgreich bestätigt.
+
+---
+*Nächster Meilenstein: Implementierung von Kea DHCP zur Automatisierung der IP-Adressvergabe innerhalb des Labor-Subnetzes.*
