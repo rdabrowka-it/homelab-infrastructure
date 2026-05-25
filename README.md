@@ -38,6 +38,7 @@ In dieser Phase wird das logische Kernnetzwerk des Labors aufgebaut. Alle Server
 3. **Software-Härtung:** Bewusste Abwahl aller X11/Desktop-Umgebungen (GNOME/XFCE). Es wurden ausschließlich die Pakete `SSH server` und `Standard-Systemwerkzeuge` installiert.
 
 ---
+---
 ## Phase 2: Core-Dienste Deployment & Netzwerk-Härtung
 
 In dieser Phase wurde die erste fundamentale Infrastruktur-VM manuell aufgesetzt und mit zentralen Netzwerkdiensten gehärtet.
