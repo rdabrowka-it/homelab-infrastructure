@@ -21,7 +21,6 @@ Als Basis für das gesamte Labor dient ein natives Linux-System mit einem Typ-1-
 4. **Troubleshooting:** Behebung eines Systemd-Initialisierungsfehlers des Monolithic Daemons (`libvirtd.service` schlug fehl aufgrund von `User record for user 'libvirt-qemu' was not found`). Der Fehler wurde durch manuelles Nachpflegen des Systembenutzers `libvirt-qemu` im OS gelöst, gefolgt von einer persistenten Aktivierung des Dienstes via `systemctl enable --now libvirtd`.
 
 ---
----
 
 ## Phase 2: Linux Core-Netzwerk & Zentrale Dienste
 
