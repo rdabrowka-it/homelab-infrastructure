@@ -24,30 +24,42 @@ Als Basis für das gesamte Labor dient ein natives Linux-System mit einem Typ-1-
 
 ## Phase 2: Linux Core-Netzwerk & Zentrale Dienste
 
-In dieser Phase wird das logische Kernnetzwerk des Labors aufgebaut. Alle Server werden als minimale Instanzen ohne grafische Oberfläche (Headless) betrieben, um maximale Performance zu gewährleisten und die Administration ausschließlich auf CLI-Ebene (SSH) zu trainieren.
+In dieser Phase wurde das logische Kernnetzwerk des Labors aufgesetzt. Alle Server werden als minimale Instanzen ohne grafische Oberfläche (Headless) betrieben, um die Administration ausschließlich auf CLI-Ebene zu trainieren.
 
 ### VM 1: Core-Server (`srv-core-01`)
 * **Betriebssystem:** Debian GNU/Linux 13 (Trixie) – Minimal Installation (CLI)
 * **Ressourcen:** 2 vCPUs, 2 GB RAM, 20 GB vDisk
 * **Statische IP-Konfiguration:** `192.168.122.200/24` | Gateway: `192.168.122.1`
-* **Bereitgestellte Dienste:** * **DNS-Server (BIND9):** Aktiv (Authoritative für `homelab.local` / Caching & Forwarding für externes Routing)
-  * **DHCP-Server (Kea DHCP):** *In Vorbereitung*
+* **Bereitgestellte Dienste:** * **DNS-Server (BIND9):** Aktiv (Authoritative für `homelab.local` / Forwarding für externes Routing)
 
-### Durchgeführte Schritte:
-
-1. **Speicherpool-Bereitstellung:** Aufgrund von Restriktionen des Hypervisor-Systembenutzers (`libvirt-qemu`) beim Zugriff auf externe Mount-Pfade (*Permission denied*), wurde das Debian-ISO-Abbild nach Best-Practice-Standard direkt in den globalen libvirt-Speicherpool (`/var/lib/libvirt/images/`) verschoben. Die Dateibesitzrechte wurden angepasst (`chown libvirt-qemu:kvm`).
-2. **OS-Deployment:** Geführte Installation des Linux-Kernels über den KVM-Virtualisierungs-Assistenten.
-3. **Software-Härtung:** Bewusste Abwahl aller X11/Desktop-Umgebungen (GNOME/XFCE). Es wurden ausschließlich die Pakete `SSH server` und `Standard-Systemwerkzeuge` installiert.
-4. **Netzwerk-Härtung (`/etc/network/interfaces`):** Umstellung des primären Interfaces (`enp1s0`) von dynamischem DHCP auf eine feste, statische IP-Konfiguration. Erfolgreiches Troubleshooting bei Syntax-Konflikten (Typo-Korrektur der `address`-Direktive) direkt über die serielle Virt-Manager-Konsole.
-5. **DNS-Infrastruktur (BIND9):** * Einrichtung als *Authoritative Nameserver* für die lokale Labor-Domain `homelab.local` mit Forward-Zonendatei (`db.homelab.local`).
-   * Konfiguration von DNS-Forwarding in den globalen Optionen zur nahtlosen Weiterleitung externer Internet-Anfragen über das KVM-Gateway.
-6. **Lokale Resolver-Anpassung (`/etc/resolv.conf`):** Systemweite DNS-Priorisierung auf den lokalen Loopback (`127.0.0.1`) umgestellt und Such-Domain (`search homelab.local`) für Kurznamen-Auflösung implementiert.
-
-### Validierung & Funktionstests:
-* Syntax-Prüfung via `named-checkconf` und `named-checkzone` fehlerfrei durchgeführt.
-* Lokale Namensauflösung des FQDN sowie des Kurznamens (`srv-core-01`) via `nslookup` erfolgreich verifiziert.
-* Externes Routing und Caching mittels `ping google.com` erfolgreich bestätigt.
+### Durchgeführte Schritte & Troubleshooting (Phase 2):
+1. **Speicherpool-Bereitstellung:** Behebung von *Permission denied*-Restriktionen des Systembenutzers (`libvirt-qemu`) durch Verschieben des Debian-ISOs in den globalen libvirt-Speicherpool (`/var/lib/libvirt/images/`) und Anpassung der Besitzrechte via `chown`.
+2. **Netzwerk-Härtung (`/etc/network/interfaces`):** Umstellung des primären Interfaces (`enp1s0`) auf eine statische Konfiguration. Behebung von Syntax-Konflikten über die serielle Virt-Manager-Konsole.
+3. **DNS-Infrastruktur:** Konfiguration einer Forward-Zone (`db.homelab.local`) mit korrekten SOA- und A-Records. Aktivierung von DNS-Forwarding in `named.conf.options`.
 
 ---
-*Nächster Meilenstein: Implementierung von Kea DHCP zur Automatisierung der IP-Adressvergabe innerhalb des Labor-Subnetzes.*
 
+## Phase 3: Dynamische Adressvergabe (Kea DHCP)
+
+In dieser Phase wurde die automatische Netzwerkkonfiguration innerhalb des Homelabs realisiert, um neue Instanzen vollautomatisch mit passenden IP-Parametern zu versorgen.
+
+### Bereitgestellter Dienst:
+* **DHCP-Server:** Kea DHCPv4 Server (Modern Enterprise Standard)
+* **Zugeordnetes Interface:** `enp1s0`
+
+### Konfigurations-Parameter (Scope):
+* **Subnetz:** `192.168.122.0/24`
+* **Dynamischer IP-Pool:** `192.168.122.50` bis `192.168.122.150`
+* **Ausgegebene Optionen an Clients:**
+  * **Standard-Gateway (Routers):** `192.168.122.1`
+  * **Zentraler DNS-Server:** `192.168.122.200` (Verweis auf `srv-core-01`)
+  * **Domain-Name:** `homelab.local`
+
+### Durchgeführte Schritte & Troubleshooting (Phase 3):
+1. **Paket-Installation:** Einspielen des `kea-dhcp4-server`-Pakets aus den Debian-Repositories.
+2. **JSON-Strukturierung & Fehlerbehebung:** * Behebung eines *Parser-Fehlers* durch Definition der zwingend erforderlichen Subnetz-`id` im JSON-Objekt.
+   * Eliminierung eines *Systemd-Startkonflikts* (`exit-code 1`), verursacht durch Inkompatibilität des Parameters `"socket-type": "stdout"`. Die Steuerung wurde erfolgreich auf das native systemd-journal-basierte Logging umgestellt.
+3. **Rechte-Härtung:** Anpassung der Besitzer- und Verzeichnisrechte der Konfigurationsdatei (`/etc/kea/kea-dhcp4.conf`) auf den Debian-spezifischen Systembenutzer `_kea`.
+
+---
+*Nächster Meilenstein: Phase 4 – Aufbau eines zentralen Verzeichnisdienstes (OpenLDAP/Samba AD) zur Benutzer- und Rechteverwaltung.*
