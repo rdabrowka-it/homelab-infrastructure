@@ -62,4 +62,16 @@ In dieser Phase wurde die automatische Netzwerkkonfiguration innerhalb des Homel
 3. **Rechte-Härtung:** Anpassung der Besitzer- und Verzeichnisrechte der Konfigurationsdatei (`/etc/kea/kea-dhcp4.conf`) auf den Debian-spezifischen Systembenutzer `_kea`.
 
 ---
-*Nächster Meilenstein: Phase 4 – Aufbau eines zentralen Verzeichnisdienstes (OpenLDAP/Samba AD) zur Benutzer- und Rechteverwaltung.*
+## Phase 4: Zentraler Verzeichnisdienst (OpenLDAP & Systemintegration)
+
+In dieser Phase wurde eine zentrale Benutzer- und Gruppenverwaltung auf Basis von OpenLDAP implementiert. Ziel war es, die Benutzerauthentifizierung vom lokalen System zu entkoppeln und für zukünftige Netzwerk-Clients zentral bereitzustellen.
+
+### Bereitgestellte Dienste:
+* **LDAP-Server (slapd):** Autoritativ für die Verzeichnisstruktur `dc=ifa,dc=de`.
+* **NSS & PAM-Kopplung (libnss-ldapd / libpam-ldapd):** Integration in das Debian-Betriebssystem zur Auflösung von POSIX-Accounts und Passwörtern.
+
+### Durchgeführte Schritte & Fehlerbehebung (Troubleshooting):
+1. **Strukturaufbau:** Erstellung der organisatorischen Einheiten (`ou=people` und `ou=groups`) via LDIF-Dateien.
+2. **POSIX-Account-Migration:** Anlage des ersten administrativen Domänen-Benutzers (`uid=rafal`, `uidNumber: 2000`) mitsamt zugehöriger Systemgruppe (`it-admins`, `gidNumber: 2000`).
+3. **PAM-Automatisierung:** Aktivierung des Moduls `pam_mkhomedir` über `pam-auth-update`, damit beim Erst-Login von LDAP-Benutzern deren Home-Verzeichnis (`/home/user`) automatisch generiert wird.
+4. **Troubleshooting (Paket-Modernisierung):** Veraltete Bibliotheken (`libnss-ldap`) wurden durch die modernen, Daemon-basierten Nachfolger (`libnss-ldapd` / `libpam-ldapd`) ersetzt, um Kompatibilität mit Debian 13 (Trixie) sicherzustellen.
